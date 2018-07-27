@@ -16,7 +16,8 @@ Zoo objects provide a way of representing time series information.  They require
 
 To use zoo objects, load zoo and lubridate.  Lubridate has handy functions for working with dates and you will want it around.
 
-```{r warning=FALSE, message=FALSE}
+
+```r
 require(zoo)
 require(lubridate)
 ```
@@ -25,16 +26,34 @@ require(lubridate)
 A zoo object is a vector or matrix with a timeline as an attribute (attached to the rows if a matrix).  While the zoo framework is quite general in what it will accept as an index, we will confine our discussion to cases where you are considering annual, quarterly, monthly and daily data.
 
 To record annual data, you could do this.
-```{r}
+
+```r
 annual=zooreg(1:10,start=2014)
 annual
 ```
 
+```
+## 2014 2015 2016 2017 2018 2019 2020 2021 2022 2023 
+##    1    2    3    4    5    6    7    8    9   10
+```
+
 Once you've created a zoo object, you extract the timeline as follows.
 
-```{r}
+
+```r
 time(annual)
+```
+
+```
+##  [1] 2014 2015 2016 2017 2018 2019 2020 2021 2022 2023
+```
+
+```r
 class(time(annual))
+```
+
+```
+## [1] "numeric"
 ```
 
 You will note that the time index is numeric class.  This works if all your data are annual, but  you will often want to be more granular. 
@@ -42,56 +61,160 @@ You will note that the time index is numeric class.  This works if all your data
 Most business prjects can be analyzed as monthly or quarterly data.  Here are a couple of examples using `yearmon` and `yearqtr`.  Note that the class of the time series is no longer `numeric`, but `yearmon` or `yearqtr`.
 
 
-```{r}
+
+```r
 monthly=zooreg(1:10,start=as.yearmon("2014-1"),freq=12)
 monthly
+```
+
+```
+## Jan 2014 Feb 2014 Mar 2014 Apr 2014 May 2014 Jun 2014 Jul 2014 Aug 2014 
+##        1        2        3        4        5        6        7        8 
+## Sep 2014 Oct 2014 
+##        9       10
+```
+
+```r
 class(time(monthly))
+```
+
+```
+## [1] "yearmon"
+```
+
+```r
 annual.yearmon=zooreg(1:10,start=as.yearmon("2014-1"))
 annual.yearmon
+```
+
+```
+## Jan 2014 Jan 2015 Jan 2016 Jan 2017 Jan 2018 Jan 2019 Jan 2020 Jan 2021 
+##        1        2        3        4        5        6        7        8 
+## Jan 2022 Jan 2023 
+##        9       10
+```
+
+```r
 quarterly=zooreg(1:10,start=as.yearqtr("2014-1"))
 quarterly
+```
+
+```
+## 2014 Q1 2015 Q1 2016 Q1 2017 Q1 2018 Q1 2019 Q1 2020 Q1 2021 Q1 2022 Q1 
+##       1       2       3       4       5       6       7       8       9 
+## 2023 Q1 
+##      10
+```
+
+```r
 class(time(quarterly))
+```
+
+```
+## [1] "yearqtr"
 ```
 
 `yearmon` and `yearqtr` are stored as decimal values with the whole number being the year and the decimal representing the portion of the year represented by the fraction.  Time differences are expressed in years and fractions of a year.  Look at the following examples to understand this behavior.
 
-```{r}
+
+```r
 t1=as.yearqtr(2014)
 t2=as.yearqtr("2014-2")
 t2-t1
+```
+
+```
+## [1] 0.25
+```
+
+```r
 t3=as.yearqtr(2014.5)
 t3-t1
 ```
 
+```
+## [1] 0.5
+```
+
 You can also use a `Date` type as a zoo index.  Time differences when using `Date` types are expressed in days as the a time difference class.  In the prior examples of building zoo objects, we used the function `zooreg` which is useful when you have a series of consecutive values, one for each time period.  If the values are non-consecutive you use the `zoo` function in which you provide the values and the vector of dates.  Here are some examples.
 
-```{r}
+
+```r
 dailyvals=zoo(1:3,as.Date(c("2014-1-3","2014-5-1","2014-6-12")))
 dailyvals
+```
+
+```
+## 2014-01-03 2014-05-01 2014-06-12 
+##          1          2          3
+```
+
+```r
 diff(time(dailyvals))
+```
+
+```
+## Time differences in days
+## [1] 118  42
 ```
 
 You can do calculations with zoo objects.  Zoo will always match the time index when attempting to do math and will object if there are different classes or times.  We create two zoo objects with overlapping time indices to illustrate.  First we demonstrate that you can sum a zoo object and the answer is no longer a zoo object.
 
-```{r}
+
+```r
 a1=zooreg(1:10,start=2014)
 a2=zooreg(1:10,start=2015)
 sum(a1)
 ```
+
+```
+## [1] 55
+```
 Next we show pairwise addition.  It only performs the addition on elements where it can match the time, dropping mismatches.
-```{r}
+
+```r
 a1+a1
+```
+
+```
+## 2014 2015 2016 2017 2018 2019 2020 2021 2022 2023 
+##    2    4    6    8   10   12   14   16   18   20
+```
+
+```r
 a1+a2
 ```
 
+```
+## 2015 2016 2017 2018 2019 2020 2021 2022 2023 
+##    3    5    7    9   11   13   15   17   19
+```
+
 This behavior is not very useful, so we need a better approach to calculating a sum.  `merge` ends up being helpful.
-```{r}
+
+```r
 merge(a1,a2)
+```
+
+```
+##      a1 a2
+## 2014  1 NA
+## 2015  2  1
+## 2016  3  2
+## 2017  4  3
+## 2018  5  4
+## 2019  6  5
+## 2020  7  6
+## 2021  8  7
+## 2022  9  8
+## 2023 10  9
+## 2024 NA 10
 ```
 
 Now we create a function to add a group of time series and return a vector which is the sum of entries for each index period where there are entries.
 
-```{r}
+
+```r
 zoosum=function(...) {
   sumz=merge(...)
   zoo(rowSums(sumz,na.rm=TRUE),time(sumz))
@@ -99,26 +222,65 @@ zoosum=function(...) {
 zoosum(a1,a2)
 ```
 
+```
+## 2014 2015 2016 2017 2018 2019 2020 2021 2022 2023 2024 
+##    1    3    5    7    9   11   13   15   17   19   10
+```
+
 Finally, we illustrate some date arithmetic with functions from lubridate.  Let's say a payment is due every month on the fifth of the month.  You do this to get the payment date.
 
-```{r}
+
+```r
 paymentdates=as.Date("2014-5-5")+months(0:25)
 paymentdates
 ```
 
+```
+##  [1] "2014-05-05" "2014-06-05" "2014-07-05" "2014-08-05" "2014-09-05"
+##  [6] "2014-10-05" "2014-11-05" "2014-12-05" "2015-01-05" "2015-02-05"
+## [11] "2015-03-05" "2015-04-05" "2015-05-05" "2015-06-05" "2015-07-05"
+## [16] "2015-08-05" "2015-09-05" "2015-10-05" "2015-11-05" "2015-12-05"
+## [21] "2016-01-05" "2016-02-05" "2016-03-05" "2016-04-05" "2016-05-05"
+## [26] "2016-06-05"
+```
+
 You can extract the year of each payment date as follows.
 
-```{r}
+
+```r
 year(paymentdates)
+```
+
+```
+##  [1] 2014 2014 2014 2014 2014 2014 2014 2014 2015 2015 2015 2015 2015 2015
+## [15] 2015 2015 2015 2015 2015 2015 2016 2016 2016 2016 2016 2016
 ```
 
 Here is another example.  Say you have a payroll of $10,000 every other Friday and you want to budget the monthly amount for the next couple years.  The `aggregate` function is handy for this.
 
-```{r}
+
+```r
 payroll=zoo(10000,as.Date("2014-5-23")+(14*1:52))
 payroll.yearmon=aggregate(payroll,by=as.yearmon(time(payroll)),sum)
 head(payroll)
+```
+
+```
+## 2014-06-06 2014-06-20 2014-07-04 2014-07-18 2014-08-01 2014-08-15 
+##      10000      10000      10000      10000      10000      10000
+```
+
+```r
 payroll.yearmon
+```
+
+```
+## Jun 2014 Jul 2014 Aug 2014 Sep 2014 Oct 2014 Nov 2014 Dec 2014 Jan 2015 
+##    20000    20000    30000    20000    20000    20000    20000    30000 
+## Feb 2015 Mar 2015 Apr 2015 May 2015 Jun 2015 Jul 2015 Aug 2015 Sep 2015 
+##    20000    20000    20000    20000    20000    30000    20000    20000 
+## Oct 2015 Nov 2015 Dec 2015 Jan 2016 Feb 2016 Mar 2016 Apr 2016 May 2016 
+##    20000    20000    20000    30000    20000    20000    20000    20000
 ```
 
 This shows how you can navigate from one index class to another.  Generally, you're probably better off to stick with a single index class as you build your model.  If you don't, you'll need to keep careful track of your indices make sure you know how any mismatches are handled or resolved.  The functions I present in this post assume indices in multiple zoo objects have been conformed to a single class.
@@ -126,7 +288,8 @@ This shows how you can navigate from one index class to another.  Generally, you
 ### Example -- investing in a rental house
 Let's illustrate this from a simple example of an investment project.  In this example, we analyze cash flows using the `yearmon` index class.  For a discussion of loan amortization functions, see the earlier post http://rpubs.com/kpolen/16816.  
 
-```{r}
+
+```r
 require(zoo)
 require(lubridate)
 source('dcf_funs.r',echo=FALSE)
@@ -189,9 +352,61 @@ cf.w=addtotal.list(cf.w)
 # format the information in a table (ready for xtable if you are using that)
 cf.table=make.table(cf.w,by='year',time.horizontal=TRUE)
 round(cf.table)
+```
+
+```
+##                        2012  2013  2014  2015  2016  2017    2018
+## buy.house           -200000     0     0     0     0     0       0
+## revenue                9000 11646 14821 13977 15603 13289    1372
+## property.tax          -2046 -2097 -2149 -2203 -2258 -2315       0
+## insurance             -1000 -1000 -1000 -1000 -1000 -1000       0
+## maintenance           -1140 -1560 -1560 -1590 -1560 -1560    -120
+## utilities                 0  -600     0  -300     0  -600       0
+## new.air.conditioner       0     0     0 -3500     0     0       0
+## fixup                     0     0     0     0     0 -2000       0
+## mortgage.proceeds    160000     0     0     0     0     0       0
+## interest              -4245 -6273 -6155 -6032 -5904 -5772    -475
+## principal             -1866 -2894 -3012 -3134 -3262 -3395    -289
+## mortgage.payoff           0     0     0     0     0     0 -142149
+## sell.house                0     0     0     0     0     0  230037
+## Total                -41297 -2778   945 -3782  1619 -3352   88377
+```
+
+```r
 # you can show the timeline on the vertical axis and aggregate to quarterly or monthy
 cf.table2=make.table(cf.w,by='quarter',time.horizontal=FALSE)
 round(cf.table2[,c(1,2,3,4)])
+```
+
+```
+##         buy.house revenue property.tax insurance
+## 2012 Q2    -2e+05    3000        -1023     -1000
+## 2012 Q3     0e+00    3000            0         0
+## 2012 Q4     0e+00    3000        -1023         0
+## 2013 Q1     0e+00    3000            0         0
+## 2013 Q2     0e+00    1235        -1048     -1000
+## 2013 Q3     0e+00    3705            0         0
+## 2013 Q4     0e+00    3705        -1048         0
+## 2014 Q1     0e+00    3705            0         0
+## 2014 Q2     0e+00    3705        -1075     -1000
+## 2014 Q3     0e+00    3705            0         0
+## 2014 Q4     0e+00    3705        -1075         0
+## 2015 Q1     0e+00    3705            0         0
+## 2015 Q2     0e+00    2470        -1102     -1000
+## 2015 Q3     0e+00    3901            0         0
+## 2015 Q4     0e+00    3901        -1102         0
+## 2016 Q1     0e+00    3901            0         0
+## 2016 Q2     0e+00    3901        -1129     -1000
+## 2016 Q3     0e+00    3901            0         0
+## 2016 Q4     0e+00    3901        -1129         0
+## 2017 Q1     0e+00    3901            0         0
+## 2017 Q2     0e+00    3901        -1157     -1000
+## 2017 Q3     0e+00    1372            0         0
+## 2017 Q4     0e+00    4115        -1157         0
+## 2018 Q1     0e+00    1372            0         0
+```
+
+```r
 #
 # Now let's finish a market value balance sheet.
 # Of course, you can change the names of the list for nicer printing.  
@@ -203,35 +418,72 @@ names(bs)=c('Market Value','Loan Balance','Equity')
 make.table(bs,fun=lastinvec)
 ```
 
+```
+##                    2012       2013       2014       2015       2016
+## Market Value  202901.65  207974.19  213173.55  218502.89  223965.46
+## Loan Balance -158134.09 -155240.41 -152228.84 -149094.57 -145832.61
+## Equity         44767.56   52733.78   60944.71   69408.31   78132.85
+##                    2017       2018
+## Market Value  229564.60  230037.46
+## Loan Balance -142437.75 -142148.68
+## Equity         87126.84   87888.78
+```
+
 ### Analyzing cash flows
 Let's calculate an IRR and NPV.
 
-```{r}
+
+```r
 irr.z(cf.w$Total)
+```
+
+```
+## [1] 0.1181856
+```
+
+```r
 #NPV of the project at inception
 npv.z(.08,cf.w$Total)
+```
+
+```
+## [1] 9719.659
+```
+
+```r
 #NPV of the remaining cash flow as May, 2014
 npv.z(.08,cf.w$Total,now=as.yearmon("2014-5"))
 ```
 
+```
+## [1] 62497.21
+```
+
 Plot a cumulative cash flow
 
-```{r}
+
+```r
 plot(cumsum(cf.w$Total),main='Cumulative Cash Flow',xlab='',ylab='',col='blue')
 ```
 
+![](dcf_files/figure-html/unnamed-chunk-16-1.png)<!-- -->
+
 Plot TVPI
 
-```{r}
+
+```r
 investment=-as.numeric(cf$buy.house+cf$mortgage.proceeds)
 cumcf=investment+cumsum(cf.w$Total)
 cumval=zoosum(cumcf,zoo(investment,buydate),bs$Equity[-length(bs$Equity)])
 plot(100*cumval/investment,col='blue',main='Total Value as % of Investment',xlab='',ylab='Percent')
 ```
 
+![](dcf_files/figure-html/unnamed-chunk-17-1.png)<!-- -->
+
 Now, let's run sensitivity of the IRR to the hold date.
 
-```{r}
+
+```r
 # make a function that calculates the IRR as a function of hold date
 irr.ans=vector()
 newcf=cf
@@ -256,43 +508,81 @@ irr.ans.z=zoo(irr.ans,daterange)
 plot(100*irr.ans.z,main='IRR as a function of hold period',xlab='',ylab='Percent',col='blue')
 ```
 
+![](dcf_files/figure-html/unnamed-chunk-18-1.png)<!-- -->
+
 So, the peak IRR is achieved if you had sold the house to an unsuspecting person right by the air conditioner went out!
 
 ### A few more comments on the NPV function
 
 The arguments to the NPV function are shown here.
 
-```{r}
+
+```r
 args(npv.z)
+```
+
+```
+## function (i, cf, freq = 1, apr = FALSE, now = NULL, drop.bef.now = TRUE) 
+## NULL
 ```
 
 When people talk about NPV, by convention they usually mean at inception of a project.  But you can specify now as any value. Suppose you have an annuity that will pay you $10,000 a year for 20 years starting in 2025.  The value discounted at 6% in 2014 is calculated as follows.
 
-```{r}
+
+```r
 annuity=zooreg(rep(10000,20),start=2025)
 npv.z(.06,annuity,now=2014)
+```
+
+```
+## [1] 64047.44
 ```
 
 If you do `drop.bef.now=FALSE`, it works like a future value function.
 
 For example. . .
 
-```{r}
+
+```r
 npv.z(.1,zoo(1,2012),now=2014,drop.bef.now=FALSE)
+```
+
+```
+## [1] 1.21
 ```
 
 Finally, the `apr` feature let's you state a discount rate as an annual percentage rate.  Suppose you borrow $10,000 to buy car at 7% interest for four years.  Here are NPV calculations with and without the apr feature.
 
-```{r}
+
+```r
 payment=(loanamort(.07,bal0=10000,apr=TRUE,freq=12,n=4))$pmt
 payment
+```
+
+```
+## [1] 239.4624
+```
+
+```r
 npv.z(.07,c(-10000,rep(payment,48)),apr=FALSE,freq=12)
+```
+
+```
+## [1] 41.78151
+```
+
+```r
 npv.z(.07,c(-10000,rep(payment,48)),apr=TRUE,freq=12)
+```
+
+```
+## [1] -8.964207e-11
 ```
 
 ### Functions used in this post are copied below
 
-```{r eval=FALSE}
+
+```r
 loanamort=function(r=NULL,bal0=NULL,pmt=NULL,n=NULL,apr=FALSE,start=NULL,freq=1) {
   ans=list()
   risnull=is.null(r)
@@ -506,5 +796,4 @@ npv.z=function(i,cf,freq=1,apr=FALSE,now=NULL,drop.bef.now=TRUE) {
   d=(1+i)^ind
   sum(cf/d)
 }
-
 ```
